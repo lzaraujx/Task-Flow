@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Gerenciador de Tarefas & Séries</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: #0a0a0a;
+            color: #ffffff;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #eab308 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #eab308 100%);
+        }
+        
+        .gradient-border {
+            position: relative;
+            background: #0a0a0a;
+            border-radius: 16px;
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #eab308 100%);
+            border-radius: 18px;
+            z-index: -1;
+        }
+        
+        .card-glow {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card-glow:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+        
+        .task-item {
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .task-completed {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        
+        .series-badge {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+        }
+        
+        .recurrence-badge {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        }
+        
+        .timer-badge {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+        }
+        
+        .timer-running {
+            animation: pulse-green 1.5s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #eab308 100%);
+            transition: all 0.3s ease;
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.5);
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .input-glow:focus {
+            outline: none;
+            border-color: #8b5cf6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+        }
+        
+        .checkbox-custom {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .checkbox-custom:checked {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            border-color: transparent;
+        }
+        
+        .checkbox-custom:checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .delete-btn {
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover .delete-btn, .list-card:hover .delete-list-btn {
+            opacity: 1;
+        }
+        
+        .delete-list-btn {
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .series-input, .timer-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .series-input:focus, .timer-input:focus {
+            border-color: #ec4899;
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);
+        }
+        
+        .timer-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        
+        .floating-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 50%, #eab308 100%);
+            border-radius: 50%;
+            animation: float 20s infinite linear;
+            opacity: 0.3;
+        }
+        
+        @keyframes float {
+            from {
+                transform: translateY(100vh) translateX(0);
+            }
+            to {
+                transform: translateY(-100px) translateX(100px);
+            }
+        }
+        
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        
+        .stats-card {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        
+        .recurrence-selector {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .task-reset-notify {
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+            border-radius: 3px;
+        }
+        
+        .timer-controls button {
+            transition: all 0.2s ease;
+        }
+        
+        .timer-controls button:active {
+            transform: scale(0.95);
+        }
+        
+        .delete-confirm-modal {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen overflow-x-hidden">
+
+    <!-- Floating Particles Background -->
+    <div class="floating-particles" id="particles"></div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="fixed top-4 left-4 z-50 space-y-2"></div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4">
+        <div class="gradient-border w-full max-w-sm p-6 relative delete-confirm-modal">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Excluir Lista?</h3>
+                <p class="text-gray-400 text-sm">Tem certeza que deseja excluir "<span id="deleteListName" class="text-white font-semibold"></span>"? Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeDeleteModal()" class="flex-1 py-3 rounded-xl bg-gray-800 text-white font-medium hover:bg-gray-700 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="confirmDeleteList()" class="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-lg shadow-red-500/30">
+                    Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        
+        <!-- Header -->
+        <header class="mb-12 text-center relative">
+            <h1 class="text-6xl font-bold mb-4 gradient-text tracking-tight">TaskFlow</h1>
+            <p class="text-gray-400 text-lg mb-8">Organize suas tarefas, séries e temporizadores com estilo</p>
+            
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 max-w-5xl mx-auto mb-8">
+                <div class="stats-card rounded-2xl p-4 text-center">
+                    <div class="text-3xl font-bold text-purple-400" id="totalLists">0</div>
+                    <div class="text-sm text-gray-400">Listas Criadas</div>
+                </div>
+                <div class="stats-card rounded-2xl p-4 text-center">
+                    <div class="text-3xl font-bold text-pink-400" id="totalTasks">0</div>
+                    <div class="text-sm text-gray-400">Tarefas Totais</div>
+                </div>
+                <div class="stats-card rounded-2xl p-4 text-center">
+                    <div class="text-3xl font-bold text-yellow-400" id="completedTasks">0</div>
+                    <div class="text-sm text-gray-400">Concluídas</div>
+                </div>
+                <div class="stats-card rounded-2xl p-4 text-center">
+                    <div class="text-3xl font-bold text-blue-400" id="recurringTasks">0</div>
+                    <div class="text-sm text-gray-400">Recorrentes</div>
+                </div>
+                <div class="stats-card rounded-2xl p-4 text-center">
+                    <div class="text-3xl font-bold text-emerald-400" id="timerTasks">0</div>
+                    <div class="text-sm text-gray-400">Com Timer</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Add List Button -->
+        <div class="flex justify-center mb-12">
+            <button onclick="openModal()" class="btn-gradient px-8 py-4 rounded-full font-semibold text-white flex items-center gap-3 shadow-2xl">
+                <i class="fas fa-plus text-xl"></i>
+                <span>Nova Lista de Tarefas</span>
+            </button>
+        </div>
+
+        <!-- Lists Container -->
+        <div id="listsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Lists will be dynamically inserted here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-20">
+            <div class="text-8xl mb-6 opacity-20 gradient-text">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h3 class="text-2xl font-semibold text-gray-400 mb-2">Nenhuma lista criada ainda</h3>
+            <p class="text-gray-600">Clique no botão acima para criar sua primeira lista</p>
+        </div>
+    </div>
+
+    <!-- Modal for New List -->
+    <div id="listModal" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4">
+        <div class="gradient-border w-full max-w-md p-8 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <h2 class="text-2xl font-bold mb-6 gradient-text">Nova Lista</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Nome da Lista</label>
+                    <input type="text" id="listNameInput" placeholder="Ex: Treino de Hoje" 
+                           class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 input-glow transition-all">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Descrição (opcional)</label>
+                    <input type="text" id="listDescInput" placeholder="Ex: Exercícios da segunda-feira" 
+                           class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-600 input-glow transition-all">
+                </div>
+            </div>
+            
+            <button onclick="createList()" class="btn-gradient w-full mt-6 py-3 rounded-xl font-semibold text-white">
+                Criar Lista
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Data Management
+        let lists = JSON.parse(localStorage.getItem('taskflow_lists')) || [];
+        let lastCheckDate = localStorage.getItem('taskflow_lastCheck') || new Date().toISOString();
+        let listToDelete = null;
+        
+        // Active timers registry
+        let activeTimers = {};
+        
+        // Recurrence Types
+        const RECURRENCE_TYPES = {
+            NONE: 'none',
+            DAILY: 'daily',
+            WEEKLY: 'weekly',
+            MONTHLY: 'monthly',
+            YEARLY: 'yearly'
+        };
+        
+        const RECURRENCE_LABELS = {
+            [RECURRENCE_TYPES.NONE]: 'Única',
+            [RECURRENCE_TYPES.DAILY]: 'Diária',
+            [RECURRENCE_TYPES.WEEKLY]: 'Semanal',
+            [RECURRENCE_TYPES.MONTHLY]: 'Mensal',
+            [RECURRENCE_TYPES.YEARLY]: 'Anual'
+        };
+        
+        const RECURRENCE_ICONS = {
+            [RECURRENCE_TYPES.NONE]: 'fa-calendar-day',
+            [RECURRENCE_TYPES.DAILY]: 'fa-sync',
+            [RECURRENCE_TYPES.WEEKLY]: 'fa-redo',
+            [RECURRENCE_TYPES.MONTHLY]: 'fa-calendar-alt',
+            [RECURRENCE_TYPES.YEARLY]: 'fa-calendar'
+        };
+        
+        // Initialize particles
+        function createParticles() {
+            const container = document.getElementById('particles');
+            for (let i = 0; i < 20; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                container.appendChild(particle);
+            }
+        }
+        
+        // Check and reset recurring tasks
+        function checkAndResetRecurringTasks() {
+            const now = new Date();
+            const lastCheck = new Date(lastCheckDate);
+            let hasChanges = false;
+            let resetNotifications = [];
+            
+            lists.forEach(list => {
+                list.tasks.forEach(task => {
+                    if (task.recurrence && task.recurrence !== RECURRENCE_TYPES.NONE) {
+                        const shouldReset = checkShouldReset(task, lastCheck, now);
+                        
+                        if (shouldReset && task.completed) {
+                            task.completed = false;
+                            task.lastReset = now.toISOString();
+                            
+                            if (task.hasSeries && task.series) {
+                                task.series.forEach(s => s.completed = false);
+                            }
+                            
+                            hasChanges = true;
+                            resetNotifications.push({
+                                taskName: task.name,
+                                listName: list.name,
+                                type: task.recurrence
+                            });
+                        }
+                    }
+                });
+            });
+            
+            if (hasChanges) {
+                saveData();
+                renderLists();
+                updateStats();
+                
+                resetNotifications.forEach((notif, index) => {
+                    setTimeout(() => {
+                        showNotification(
+                            `Tarefa "${notif.taskName}" foi resetada (${RECURRENCE_LABELS[notif.type]})`,
+                            'info'
+                        );
+                    }, index * 500);
+                });
+            }
+            
+            localStorage.setItem('taskflow_lastCheck', now.toISOString());
+            lastCheckDate = now.toISOString();
+        }
+        
+        function checkShouldReset(task, lastCheck, now) {
+            const lastReset = task.lastReset ? new Date(task.lastReset) : new Date(task.createdAt);
+            
+            switch (task.recurrence) {
+                case RECURRENCE_TYPES.DAILY:
+                    return !isSameDay(lastReset, now);
+                    
+                case RECURRENCE_TYPES.WEEKLY:
+                    return getWeekNumber(lastReset) !== getWeekNumber(now) || 
+                           lastReset.getFullYear() !== now.getFullYear();
+                    
+                case RECURRENCE_TYPES.MONTHLY:
+                    return lastReset.getMonth() !== now.getMonth() || 
+                           lastReset.getFullYear() !== now.getFullYear();
+                    
+                case RECURRENCE_TYPES.YEARLY:
+                    return lastReset.getFullYear() !== now.getFullYear();
+                    
+                default:
+                    return false;
+            }
+        }
+        
+        function isSameDay(date1, date2) {
+            return date1.getDate() === date2.getDate() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getFullYear() === date2.getFullYear();
+        }
+        
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        }
+        
+        function showNotification(message, type = 'info') {
+            const container
